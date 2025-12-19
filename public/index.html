@@ -3,19 +3,32 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#6917a6">
     <title>JustNaija</title>
     <style>
-        body { background: #f4f4f4; font-family: sans-serif; margin: 0; padding-top: 32px; font-size:14px; }
-        header { position: fixed; top: 0; left: 0; width: 100%; height: 32px; background: #6917a6; color: white; line-height: 32px; text-align: center; font-weight: bold; z-index:99; }
-        .item { padding: 10px; border-bottom: 1px solid #ddd; background: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .focused { background: #6917a6; color: white; }
-        #status { position: fixed; bottom: 0; width: 100%; background: #222; color: #fff; font-size: 12px; padding: 4px; text-align: center; }
+        body { background: #f4f4f4; font-family: sans-serif; margin: 0; padding-top: 34px; padding-bottom: 30px; font-size:14px; overflow: hidden; }
+        header { position: fixed; top: 0; left: 0; width: 100%; height: 32px; background: #6917a6; color: white; line-height: 32px; text-align: center; font-weight: bold; z-index:99; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        #list { position: absolute; top: 32px; bottom: 30px; width: 100%; overflow-y: auto; }
+        .item { padding: 12px 10px; border-bottom: 1px solid #ddd; background: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
+        .focused { background: #6917a6; color: white; border-bottom: 1px solid #5a1290; }
+        footer { position: fixed; bottom: 0; left: 0; width: 100%; height: 30px; background: #eee; display: flex; border-top: 1px solid #ccc; font-size: 14px; line-height: 30px; font-weight: 600; }
+        .softkey { flex: 1; text-align: center; color: #333; }
+        .center { font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body>
-    <header>JustNaija Lite</header>
-    <div id="list">Loading...</div>
-    <div id="status">Connecting...</div>
+    <header>JustNaija Pro</header>
+    
+    <div id="list">
+        <div style="padding:20px; text-align:center; color:#666;">Loading Songs...</div>
+    </div>
+
+    <footer>
+        <div class="softkey" id="sk-left"></div>
+        <div class="softkey center" id="sk-center">PLAY</div>
+        <div class="softkey" id="sk-right">Search</div>
+    </footer>
+
     <script src="app.js"></script> 
 </body>
 </html>
