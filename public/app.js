@@ -12,27 +12,28 @@ const listEl = document.getElementById('list');
 const centerKey = document.getElementById('sk-center');
 const leftKey = document.getElementById('sk-left');
 
+// Helper for KaiOS XHR
 function kaiosFetch(url, callback, errorCallback) {
     const xhr = new XMLHttpRequest({ mozSystem: true });
     xhr.open('GET', url, true);
-    xhr.timeout = 45000;
+    xhr.timeout = 40000;
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
-                try { 
+                try {
                     const data = JSON.parse(xhr.responseText);
-                    // CRASH PROTECTION: Ensure data is an array
-                    if(Array.isArray(data)) {
+                    // SAFETY CHECK: Ensure data is valid before sending back
+                    if (data && (Array.isArray(data) || data.url || data.error)) {
                         callback(data);
                     } else {
-                        errorCallback("Invalid Data format");
+                        errorCallback("Invalid response format");
                     }
                 } 
-                catch (e) { errorCallback("Bad JSON"); }
-            } else { errorCallback("Err: " + xhr.status); }
+                catch (e) { errorCallback("Bad Data (JSON)"); }
+            } else { errorCallback("Server Error: " + xhr.status); }
         }
     };
-    xhr.onerror = () => errorCallback("No Net");
+    xhr.onerror = () => errorCallback("Network Error");
     xhr.ontimeout = () => errorCallback("Timeout");
     xhr.send();
 }
@@ -48,18 +49,26 @@ function loadData(type, query, pg) {
 
     kaiosFetch(url, 
         (data) => {
+            // Check for backend errors
+            if(data.error) {
+                if(pg===1) listEl.innerHTML = '<div style="padding:20px; color:red; text-align:center;">' + data.error + '</div>';
+                else alert(data.error);
+                return;
+            }
+
             if(pg === 1) {
-                songs = data; 
+                songs = Array.isArray(data) ? data : []; 
                 idx = 0;
             } else {
-                songs = songs.concat(data);
+                if(Array.isArray(data)) songs = songs.concat(data);
             }
+
             if(songs.length === 0) listEl.innerHTML = '<div style="padding:20px; text-align:center;">No Results Found</div>';
             else render();
         }, 
         (err) => {
             if(pg === 1) listEl.innerHTML = '<div style="padding:20px; text-align:center; color:#ff5555;">' + err + '</div>';
-            else alert("Could not load more.");
+            else alert("Error: " + err);
         }
     );
 }
@@ -69,10 +78,12 @@ function render() {
     songs.forEach((s, i) => {
         const item = document.createElement('div');
         item.className = 'item' + (i === idx ? ' focused' : '');
+        
         let imgUrl = s.img;
         if (!imgUrl || imgUrl.indexOf('http') === -1) {
             imgUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
         }
+        
         item.innerHTML = `
             <img class="thumb" src="${imgUrl}" loading="lazy">
             <div class="info">
@@ -115,7 +126,7 @@ document.addEventListener('keydown', e => {
             break;
         case 'SoftRight': 
             const q = prompt("Search Artist:");
-            if(q) {
+            if(q && q.trim().length > 0) {
                 currentMode = 'search';
                 currentQuery = q;
                 page = 1;
@@ -134,7 +145,7 @@ function playSong(song) {
 
     kaiosFetch(API_BASE + '?type=stream&url=' + encodeURIComponent(song.link),
         (data) => {
-            if(!data.url) { alert("Link Error"); centerKey.innerText = "PLAY"; return; }
+            if(!data.url) { alert("Link not found"); centerKey.innerText = "PLAY"; return; }
             centerKey.innerText = "PLAYING";
             currentAudio = new Audio(data.url);
             currentAudio.mozAudioChannelType = 'content';
@@ -142,7 +153,7 @@ function playSong(song) {
             currentAudio.onerror = () => { alert("Format Error"); centerKey.innerText = "PLAY"; };
             currentAudio.play();
         },
-        (err) => { alert("Net Error"); centerKey.innerText = "PLAY"; }
+        (err) => { alert(err); centerKey.innerText = "PLAY"; }
     );
 }
 
@@ -161,10 +172,10 @@ function triggerNativeDownload(song) {
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                alert("Download Started!");
+                alert("Started! Check Notifications.");
             } catch(e) { alert("DL Error: " + e.message); }
             leftKey.innerText = "Download";
         },
-        (err) => { alert("Net Error"); leftKey.innerText = "Download"; }
+        (err) => { alert(err); leftKey.innerText = "Download"; }
     );
 }
