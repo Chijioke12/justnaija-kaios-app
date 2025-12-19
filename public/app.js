@@ -1,72 +1,94 @@
 
-/**
- * CONFIGURATION
- * 1. Deploy to Vercel.
- * 2. Copy your URL (e.g., https://my-app.vercel.app).
- * 3. Paste it below inside the quotes.
- */
-const VERCEL_URL = ""; // <--- PASTE YOUR URL HERE
+const VERCEL_URL = "https://justnaija-kaios-app.vercel.app";
+const API_BASE = VERCEL_URL + '/api/scraper';
 
-// Automatic fallback for testing in browser
-const API_BASE = (VERCEL_URL === "") 
-    ? (window.location.hostname === 'localhost' ? 'http://localhost:3000/api/scraper' : '/api/scraper')
-    : VERCEL_URL + '/api/scraper';
+let songs = [];
+let idx = 0;
+let currentAudio = null;
 
-let songs = [], idx = 0;
+const listEl = document.getElementById('list');
+const centerKey = document.getElementById('sk-center');
 
-function log(msg) { document.getElementById('status').innerText = msg; }
+// Start
+fetchSongs('list');
 
-// 1. Fetch Songs
-fetch(API_BASE + '?type=list')
-    .then(r => r.json())
-    .then(d => { 
+function fetchSongs(type, query) {
+    listEl.innerHTML = '<div style="padding:20px; text-align:center;">Loading...</div>';
+    let url = API_BASE + '?type=' + type;
+    if(query) url += '&q=' + encodeURIComponent(query);
+
+    fetch(url).then(r => r.json()).then(d => { 
         songs = d; 
-        render(); 
-        log("Loaded " + songs.length + " songs"); 
-        if(songs.length === 0) log("No songs found (Check API)");
-    })
-    .catch(e => {
-        log("Connection Error!");
-        console.error(e);
-        // If Vercel URL is missing
-        if(VERCEL_URL === "" && window.location.protocol === "app:") {
-            alert("Please edit app.js and add your Vercel URL!");
-        }
+        idx = 0;
+        if(songs.length === 0) listEl.innerHTML = '<div style="padding:20px; text-align:center;">No Results</div>';
+        else render(); 
+    }).catch(e => {
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Connection Failed</div>';
     });
+}
 
-// 2. Render List
 function render() {
-    const list = document.getElementById('list');
-    list.innerHTML = '';
+    listEl.innerHTML = '';
     songs.forEach((s, i) => {
         const d = document.createElement('div');
         d.className = 'item' + (i === idx ? ' focused' : '');
         d.innerText = s.title;
-        list.appendChild(d);
+        listEl.appendChild(d);
     });
-    document.querySelector('.focused')?.scrollIntoView({block:"center"});
+    scrollToFocused();
 }
 
-// 3. Controls
+function scrollToFocused() {
+    const focusedEl = document.querySelector('.focused');
+    if (!focusedEl) return;
+    focusedEl.scrollIntoView({block: "center", behavior: "auto"});
+}
+
 document.addEventListener('keydown', e => {
-    if(e.key === 'ArrowDown' && idx < songs.length-1) { idx++; render(); }
-    if(e.key === 'ArrowUp' && idx > 0) { idx--; render(); }
-    if(e.key === 'Enter') playSong(songs[idx]);
+    switch(e.key) {
+        case 'ArrowDown': if(idx < songs.length-1) { idx++; render(); } break;
+        case 'ArrowUp': if(idx > 0) { idx--; render(); } break;
+        case 'Enter': playSong(songs[idx]); break;
+        case 'SoftRight': 
+            const q = prompt("Search Artist:");
+            if(q) fetchSongs('search', q);
+            break;
+    }
 });
 
 function playSong(song) {
-    log("Fetching MP3...");
+    if(!song) return;
+    centerKey.innerText = "WAIT...";
+    
+    // FIX: Stop previous song
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+
     fetch(API_BASE + '?type=stream&url=' + encodeURIComponent(song.link))
         .then(r => r.json())
         .then(d => {
-            if(!d.url) return log("No MP3 found");
+            if(!d.url) {
+                alert("Link Not Found (Try another)");
+                centerKey.innerText = "PLAY";
+                return;
+            }
+            centerKey.innerText = "PLAYING";
+            currentAudio = new Audio(d.url);
+            currentAudio.mozAudioChannelType = 'content';
             
-            log("Playing: " + song.title);
-            const a = new Audio(d.url);
-            a.mozAudioChannelType = 'content'; // Background Audio
-            a.play();
+            currentAudio.onerror = (e) => {
+                // Show specific error for debugging
+                alert("Format Error: Server sent HTML or bad MP3.");
+                centerKey.innerText = "PLAY";
+            };
             
-            a.onerror = (err) => log("Playback Error");
+            currentAudio.onended = () => centerKey.innerText = "PLAY";
+            currentAudio.play();
         })
-        .catch(e => log("Stream Error"));
+        .catch(e => {
+            alert("Network Error");
+            centerKey.innerText = "PLAY";
+        });
 }
