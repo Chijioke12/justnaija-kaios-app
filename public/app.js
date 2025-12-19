@@ -1,4 +1,5 @@
 
+// HARDCODED API URL
 const VERCEL_URL = "https://justnaija-kaios-app.vercel.app";
 const API_BASE = VERCEL_URL + '/api/scraper';
 
@@ -9,7 +10,7 @@ let currentAudio = null;
 const listEl = document.getElementById('list');
 const centerKey = document.getElementById('sk-center');
 
-// Start
+// Start App
 fetchSongs('list');
 
 function fetchSongs(type, query) {
@@ -23,7 +24,7 @@ function fetchSongs(type, query) {
         if(songs.length === 0) listEl.innerHTML = '<div style="padding:20px; text-align:center;">No Results</div>';
         else render(); 
     }).catch(e => {
-        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Connection Failed</div>';
+        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Network Error</div>';
     });
 }
 
