@@ -1,7 +1,6 @@
 
 const axios = require('axios');
 const cheerio = require('cheerio');
-
 const allowCors = fn => async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -10,54 +9,41 @@ const allowCors = fn => async (req, res) => {
 };
 
 const handler = async (req, res) => {
-    const { type, url, q } = req.query;
+    const { type, url, q, page } = req.query; // Added 'page' support
+    const pageNum = page ? '/page/' + page : '';
 
     try {
-        // 1. LIST SONGS
+        // 1. LIST SONGS (With Pagination)
         if (type === 'list') {
-            const { data } = await axios.get('https://justnaija.com');
+            const { data } = await axios.get('https://justnaija.com' + pageNum);
             return res.status(200).json(scrapeList(data));
         }
         
-        // 2. SEARCH
+        // 2. SEARCH (With Pagination)
         if (type === 'search' && q) {
-            const { data } = await axios.get('https://justnaija.com/?s=' + encodeURIComponent(q));
+            // Search URL structure: https://justnaija.com/page/2/?s=burna
+            const searchUrl = 'https://justnaija.com' + pageNum + '/?s=' + encodeURIComponent(q);
+            const { data } = await axios.get(searchUrl);
             return res.status(200).json(scrapeList(data));
         }
 
-        // 3. GET MP3 (AD BLOCKER VERSION)
+        // 3. STREAM (Ad Blocker Logic)
         if (type === 'stream' && url) {
             let response = await axios.get(url);
             let $ = cheerio.load(response.data);
             let candidates = [];
-
-            // Find ALL possible download links
             $('a').each((i, el) => {
                 const h = $(el).attr('href');
                 const t = $(el).text().toLowerCase();
-                
                 if (!h) return;
-
-                // --- AD BLOCKER RULES ---
-                if (h.includes('ainouzaudre') || h.includes('adsterra') || h.includes('bet9ja') || h.includes('google')) {
-                    return; // SKIP ADS
-                }
-
-                // If it looks like a song, save it
-                if (h.endsWith('.mp3') || t.includes('download mp3') || t.includes('download audio')) {
-                    candidates.push(h);
-                }
+                if (h.includes('ainouzaudre') || h.includes('adsterra') || h.includes('google')) return; 
+                if (h.endsWith('.mp3') || t.includes('download mp3') || t.includes('download audio')) candidates.push(h);
             });
 
-            if (candidates.length === 0) return res.status(404).json({ error: "No clean links found" });
+            if (candidates.length === 0) return res.status(404).json({ error: "No link" });
 
-            // Prioritize links that actually end in .mp3
-            let bestLink = candidates.find(link => link.endsWith('.mp3'));
-            
-            // If no .mp3 link, take the first valid candidate
-            if (!bestLink) bestLink = candidates[0];
+            let bestLink = candidates.find(link => link.endsWith('.mp3')) || candidates[0];
 
-            // If it's a redirect page (not an mp3 yet), try one more hop
             if (!bestLink.endsWith('.mp3')) {
                 try {
                     const page2 = await axios.get(bestLink);
@@ -68,16 +54,11 @@ const handler = async (req, res) => {
                         if (h && h.endsWith('.mp3')) finalMp3 = h;
                     });
                     if (finalMp3) bestLink = finalMp3;
-                } catch(e) {
-                    // Ignore error, stick with bestLink
-                }
+                } catch(e) {}
             }
-
             return res.status(200).json({ url: bestLink });
         }
-        
         res.status(400).json({ error: "Bad Request" });
-
     } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
@@ -87,10 +68,13 @@ function scrapeList(html) {
     $('article').each((i, el) => {
         const title = $(el).find('h2 a').text() || $(el).find('h3 a').text();
         const link = $(el).find('h2 a').attr('href') || $(el).find('h3 a').attr('href');
-        if (title && link) songs.push({ title: title.trim(), link });
+        // Scrape Image
+        let img = $(el).find('img').attr('src') || $(el).find('img').attr('data-src');
+        
+        if (title && link) {
+            songs.push({ title: title.trim(), link, img });
+        }
     });
     return songs;
 }
-
 module.exports = allowCors(handler);
-    
