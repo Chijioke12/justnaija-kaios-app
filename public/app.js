@@ -12,7 +12,6 @@ const listEl = document.getElementById('list');
 const centerKey = document.getElementById('sk-center');
 const leftKey = document.getElementById('sk-left');
 
-// Helper for KaiOS XHR
 function kaiosFetch(url, callback, errorCallback) {
     const xhr = new XMLHttpRequest({ mozSystem: true });
     xhr.open('GET', url, true);
@@ -20,8 +19,16 @@ function kaiosFetch(url, callback, errorCallback) {
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
-                try { callback(JSON.parse(xhr.responseText)); } 
-                catch (e) { errorCallback("Bad Data"); }
+                try { 
+                    const data = JSON.parse(xhr.responseText);
+                    // CRASH PROTECTION: Ensure data is an array
+                    if(Array.isArray(data)) {
+                        callback(data);
+                    } else {
+                        errorCallback("Invalid Data format");
+                    }
+                } 
+                catch (e) { errorCallback("Bad JSON"); }
             } else { errorCallback("Err: " + xhr.status); }
         }
     };
@@ -47,7 +54,7 @@ function loadData(type, query, pg) {
             } else {
                 songs = songs.concat(data);
             }
-            if(songs.length === 0) listEl.innerHTML = '<div style="padding:20px; text-align:center;">No Results</div>';
+            if(songs.length === 0) listEl.innerHTML = '<div style="padding:20px; text-align:center;">No Results Found</div>';
             else render();
         }, 
         (err) => {
@@ -62,13 +69,10 @@ function render() {
     songs.forEach((s, i) => {
         const item = document.createElement('div');
         item.className = 'item' + (i === idx ? ' focused' : '');
-        
-        // Image logic: if img is undefined or error, use placeholder
         let imgUrl = s.img;
         if (!imgUrl || imgUrl.indexOf('http') === -1) {
             imgUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
         }
-        
         item.innerHTML = `
             <img class="thumb" src="${imgUrl}" loading="lazy">
             <div class="info">
@@ -79,7 +83,6 @@ function render() {
         listEl.appendChild(item);
     });
 
-    // Load More Button
     const moreBtn = document.createElement('div');
     moreBtn.className = 'load-more' + (idx === songs.length ? ' focused' : '');
     moreBtn.innerText = "LOAD MORE...";
@@ -143,33 +146,23 @@ function playSong(song) {
     );
 }
 
-// --- NATIVE DOWNLOAD (Browser API) ---
 function triggerNativeDownload(song) {
     if(!confirm("Download " + song.title + "?")) return;
-    
     leftKey.innerText = "DL...";
     
-    // 1. Get MP3 Link first
     kaiosFetch(API_BASE + '?type=stream&url=' + encodeURIComponent(song.link),
         (data) => {
-            if(!data.url) { alert("Cannot find link"); leftKey.innerText = "Download"; return; }
-            
-            // 2. USE NATIVE BROWSER DOWNLOAD (Shows Progress Bar)
+            if(!data.url) { alert("Link not found"); leftKey.innerText = "Download"; return; }
             try {
-                // This creates a hidden link and clicks it.
-                // On KaiOS, this triggers the System Download Manager.
                 var a = document.createElement("a");
                 a.href = data.url;
-                a.download = song.title + ".mp3"; // Hint filename
-                a.target = "_blank"; // Open in background
+                a.download = song.title + ".mp3";
+                a.target = "_blank";
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                
-                alert("Download Started! Check Notification Panel.");
-            } catch(e) {
-                alert("Download Error: " + e.message);
-            }
+                alert("Download Started!");
+            } catch(e) { alert("DL Error: " + e.message); }
             leftKey.innerText = "Download";
         },
         (err) => { alert("Net Error"); leftKey.innerText = "Download"; }
