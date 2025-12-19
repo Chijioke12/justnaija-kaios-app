@@ -25,48 +25,55 @@ const handler = async (req, res) => {
             return res.status(200).json(scrapeList(data));
         }
 
-        // 3. GET MP3 (DEEP SEARCH)
+        // 3. GET MP3 (AD BLOCKER VERSION)
         if (type === 'stream' && url) {
-            // Step A: Visit the link provided
             let response = await axios.get(url);
             let $ = cheerio.load(response.data);
-            let targetLink = "";
+            let candidates = [];
 
-            // Find the "Download" button
+            // Find ALL possible download links
             $('a').each((i, el) => {
                 const h = $(el).attr('href');
                 const t = $(el).text().toLowerCase();
-                if (h && (t.includes('download mp3') || t.includes('download audio'))) {
-                    targetLink = h;
+                
+                if (!h) return;
+
+                // --- AD BLOCKER RULES ---
+                if (h.includes('ainouzaudre') || h.includes('adsterra') || h.includes('bet9ja') || h.includes('google')) {
+                    return; // SKIP ADS
+                }
+
+                // If it looks like a song, save it
+                if (h.endsWith('.mp3') || t.includes('download mp3') || t.includes('download audio')) {
+                    candidates.push(h);
                 }
             });
 
-            if (!targetLink) return res.status(404).json({ error: "No download link found" });
+            if (candidates.length === 0) return res.status(404).json({ error: "No clean links found" });
 
-            // Step B: Check if it's already an MP3
-            if (targetLink.endsWith('.mp3')) {
-                return res.status(200).json({ url: targetLink });
+            // Prioritize links that actually end in .mp3
+            let bestLink = candidates.find(link => link.endsWith('.mp3'));
+            
+            // If no .mp3 link, take the first valid candidate
+            if (!bestLink) bestLink = candidates[0];
+
+            // If it's a redirect page (not an mp3 yet), try one more hop
+            if (!bestLink.endsWith('.mp3')) {
+                try {
+                    const page2 = await axios.get(bestLink);
+                    const $2 = cheerio.load(page2.data);
+                    let finalMp3 = "";
+                    $2('a').each((i, el) => {
+                        const h = $(el).attr('href');
+                        if (h && h.endsWith('.mp3')) finalMp3 = h;
+                    });
+                    if (finalMp3) bestLink = finalMp3;
+                } catch(e) {
+                    // Ignore error, stick with bestLink
+                }
             }
 
-            // Step C: If it's a page, go deeper (The Format Error Fix)
-            try {
-                const page2 = await axios.get(targetLink);
-                $ = cheerio.load(page2.data);
-                let finalMp3 = "";
-                
-                // Find the raw .mp3 link on the second page
-                $('a').each((i, el) => {
-                    const h = $(el).attr('href');
-                    if (h && h.endsWith('.mp3')) finalMp3 = h;
-                });
-
-                if (finalMp3) return res.status(200).json({ url: finalMp3 });
-                // If deep search failed, return the first link as a fallback
-                return res.status(200).json({ url: targetLink });
-                
-            } catch(err) {
-                return res.status(200).json({ url: targetLink });
-            }
+            return res.status(200).json({ url: bestLink });
         }
         
         res.status(400).json({ error: "Bad Request" });
@@ -86,3 +93,4 @@ function scrapeList(html) {
 }
 
 module.exports = allowCors(handler);
+    
