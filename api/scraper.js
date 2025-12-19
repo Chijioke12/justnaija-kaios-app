@@ -27,7 +27,7 @@ const handler = async (req, res) => {
 
         // 3. GET MP3 (DEEP SEARCH)
         if (type === 'stream' && url) {
-            // First Hop: Visit the Song Page
+            // Step A: Visit the link provided
             let response = await axios.get(url);
             let $ = cheerio.load(response.data);
             let targetLink = "";
@@ -43,31 +43,30 @@ const handler = async (req, res) => {
 
             if (!targetLink) return res.status(404).json({ error: "No download link found" });
 
-            // CHECK: Is it already an MP3?
+            // Step B: Check if it's already an MP3
             if (targetLink.endsWith('.mp3')) {
                 return res.status(200).json({ url: targetLink });
             }
 
-            // Second Hop: It's a "Download Page", visit it!
+            // Step C: If it's a page, go deeper (The Format Error Fix)
             try {
                 const page2 = await axios.get(targetLink);
                 $ = cheerio.load(page2.data);
                 let finalMp3 = "";
                 
-                // Find the raw .mp3 link on this second page
+                // Find the raw .mp3 link on the second page
                 $('a').each((i, el) => {
                     const h = $(el).attr('href');
                     if (h && h.endsWith('.mp3')) finalMp3 = h;
                 });
 
                 if (finalMp3) return res.status(200).json({ url: finalMp3 });
+                // If deep search failed, return the first link as a fallback
+                return res.status(200).json({ url: targetLink });
                 
             } catch(err) {
-                // If second hop fails, maybe the first link was a redirect to mp3?
                 return res.status(200).json({ url: targetLink });
             }
-
-            return res.status(404).json({ error: "MP3 extraction failed" });
         }
         
         res.status(400).json({ error: "Bad Request" });
