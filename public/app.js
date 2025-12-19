@@ -5,12 +5,9 @@ let idx = 0;
 let page = 1;
 let currentMode = 'list';
 let currentQuery = '';
-
-// PLAYER STATE
 let currentAudio = null;
 let playingIndex = -1;
 let isShuffle = false;
-
 const listEl = document.getElementById('list');
 const centerKey = document.getElementById('sk-center');
 const leftKey = document.getElementById('sk-left');
@@ -103,47 +100,27 @@ function updateSoftKeys() {
 
 document.addEventListener('keydown', e => {
     switch(e.key) {
-        case 'ArrowDown': 
-            if(idx < songs.length) { idx++; render(); } 
-            break;
-        case 'ArrowUp': 
-            if(idx > 0) { idx--; render(); } 
-            break;
+        case 'ArrowDown': if(idx < songs.length) { idx++; render(); } break;
+        case 'ArrowUp': if(idx > 0) { idx--; render(); } break;
         case 'Enter': 
-            if(idx === songs.length) {
-                page++;
-                loadData(currentMode, currentQuery, page);
-            } else {
-                handleCenterKey(); 
-            }
+            if(idx === songs.length) { page++; loadData(currentMode, currentQuery, page); } 
+            else handleCenterKey(); 
             break;
         case 'SoftRight': 
             const q = prompt("Search Song or Artist:");
-            if(q && q.trim().length > 0) {
-                currentMode = 'search'; currentQuery = q; page = 1; loadData('search', q, 1);
-            }
+            if(q && q.trim().length > 0) { currentMode = 'search'; currentQuery = q; page = 1; loadData('search', q, 1); }
             break;
-        case 'SoftLeft':
-            if(idx < songs.length) triggerNativeDownload(songs[idx]);
-            break;
+        case 'SoftLeft': if(idx < songs.length) triggerNativeDownload(songs[idx]); break;
         case '4': if(playingIndex > 0) playSong(playingIndex - 1); break;
         case '6': playNext(); break;
-        case '5': 
-            isShuffle = !isShuffle; 
-            headerEl.innerText = isShuffle ? "JustNaija (Shuffle)" : "JustNaija"; 
-            break;
+        case '5': isShuffle = !isShuffle; headerEl.innerText = isShuffle ? "JustNaija (Shuffle)" : "JustNaija"; break;
     }
 });
 
 function handleCenterKey() {
     if (idx === playingIndex && currentAudio) {
-        if (currentAudio.paused) {
-            currentAudio.play();
-            centerKey.innerText = "PAUSE";
-        } else {
-            currentAudio.pause();
-            centerKey.innerText = "RESUME";
-        }
+        if (currentAudio.paused) { currentAudio.play(); centerKey.innerText = "PAUSE"; } 
+        else { currentAudio.pause(); centerKey.innerText = "RESUME"; }
         return;
     }
     playSong(idx);
@@ -158,32 +135,24 @@ function playNext() {
 function playSong(index) {
     const song = songs[index];
     if(!song) return;
-
     centerKey.innerText = "WAIT...";
     playingIndex = index;
     render(); 
-    
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     progressBar.style.width = "0%";
-
     kaiosFetch(API_BASE + '?type=stream&url=' + encodeURIComponent(song.link),
         (data) => {
+            if(data.error) { alert("Song Error: " + data.error); centerKey.innerText = "PLAY"; return; }
             if(!data.url) { alert("Link not found"); centerKey.innerText = "PLAY"; return; }
-            
             centerKey.innerText = "PAUSE";
             currentAudio = new Audio(data.url);
             currentAudio.mozAudioChannelType = 'content';
-            
-            currentAudio.ontimeupdate = () => {
-                const pct = (currentAudio.currentTime / currentAudio.duration) * 100;
-                progressBar.style.width = pct + "%";
-            };
-
+            currentAudio.ontimeupdate = () => { const pct = (currentAudio.currentTime / currentAudio.duration) * 100; progressBar.style.width = pct + "%"; };
             currentAudio.onended = () => playNext();
             currentAudio.onerror = () => { alert("Format Error"); centerKey.innerText = "PLAY"; };
             currentAudio.play();
         },
-        (err) => { alert(err); centerKey.innerText = "PLAY"; }
+        (err) => { alert("Net Error"); centerKey.innerText = "PLAY"; }
     );
 }
 
@@ -201,6 +170,6 @@ function triggerNativeDownload(song) {
             } catch(e) { alert("DL Error: " + e.message); }
             leftKey.innerText = "Download";
         },
-        (err) => { alert(err); leftKey.innerText = "Download"; }
+        (err) => { alert("Net Error"); leftKey.innerText = "Download"; }
     );
 }
