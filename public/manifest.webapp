@@ -1,0 +1,17 @@
+{
+  "name": "JustNaija",
+  "description": "Music Downloader",
+  "launch_path": "/index.html",
+  "icons": {
+    "56": "/icons/icon56.png"
+  },
+  "type": "privileged",
+  "permissions": {
+    "systemXHR": {},
+    "audio-channel-content": {},
+    "device-storage:sdcard": {
+      "access": "readwrite"
+    }
+  },
+  "origin": "app://justnaija-kaios"
+}
