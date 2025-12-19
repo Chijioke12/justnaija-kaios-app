@@ -1,6 +1,6 @@
 {
-  "name": "JustNaija",
-  "description": "Music & Search",
+  "name": "JustNaija Stable",
+  "description": "Stream & Download",
   "launch_path": "/index.html",
   "icons": {
     "56": "/icons/icon56.png",
@@ -9,10 +9,10 @@
   "type": "privileged",
   "permissions": {
     "systemXHR": {
-      "description": "API"
+      "description": "API Access"
     },
     "audio-channel-content": {
-      "description": "Music"
+      "description": "Background Music"
     },
     "device-storage:sdcard": {
       "access": "readwrite"
