@@ -7,9 +7,16 @@
   },
   "type": "privileged",
   "permissions": {
-    "systemXHR": {},
-    "audio-channel-content": {},
+    "systemXHR": {
+      "description": "Fetch API"
+    },
+    "audio-channel-content": {
+      "description": "Play Music"
+    },
     "device-storage:sdcard": {
+      "access": "readwrite"
+    },
+    "device-storage:music": {
       "access": "readwrite"
     }
   },
