@@ -93,7 +93,6 @@ function updateSoftKeys() {
     if (idx === songs.length) {
         centerKey.innerText = "LOAD";
     } else {
-        // If focusing on the playing song, show PAUSE/PLAY state
         if (idx === playingIndex && currentAudio) {
             centerKey.innerText = currentAudio.paused ? "RESUME" : "PAUSE";
         } else {
@@ -119,7 +118,7 @@ document.addEventListener('keydown', e => {
             }
             break;
         case 'SoftRight': 
-            const q = prompt("Search Music:");
+            const q = prompt("Search Song or Artist:");
             if(q && q.trim().length > 0) {
                 currentMode = 'search'; currentQuery = q; page = 1; loadData('search', q, 1);
             }
@@ -137,7 +136,6 @@ document.addEventListener('keydown', e => {
 });
 
 function handleCenterKey() {
-    // If we press Enter on the song that is ALREADY playing
     if (idx === playingIndex && currentAudio) {
         if (currentAudio.paused) {
             currentAudio.play();
@@ -148,7 +146,6 @@ function handleCenterKey() {
         }
         return;
     }
-    // Otherwise play new song
     playSong(idx);
 }
 
