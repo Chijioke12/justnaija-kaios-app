@@ -9,41 +9,49 @@ const allowCors = fn => async (req, res) => {
 };
 
 const handler = async (req, res) => {
-    const { type, url, q, page } = req.query; // Added 'page' support
+    const { type, url, q, page } = req.query;
     const pageNum = page ? '/page/' + page : '';
 
     try {
-        // 1. LIST SONGS (With Pagination)
+        // 1. LIST SONGS (Normal)
         if (type === 'list') {
             const { data } = await axios.get('https://justnaija.com' + pageNum);
             return res.status(200).json(scrapeList(data));
         }
         
-        // 2. SEARCH (With Pagination)
+        // 2. SEARCH (Updated for JustNaija Search Results)
         if (type === 'search' && q) {
-            // Search URL structure: https://justnaija.com/page/2/?s=burna
+            // JustNaija uses a standard search parameter
             const searchUrl = 'https://justnaija.com' + pageNum + '/?s=' + encodeURIComponent(q);
             const { data } = await axios.get(searchUrl);
             return res.status(200).json(scrapeList(data));
         }
 
-        // 3. STREAM (Ad Blocker Logic)
+        // 3. STREAM (Ad Blocker + Redirect Handler)
         if (type === 'stream' && url) {
             let response = await axios.get(url);
             let $ = cheerio.load(response.data);
             let candidates = [];
+            
+            // Find valid links
             $('a').each((i, el) => {
                 const h = $(el).attr('href');
                 const t = $(el).text().toLowerCase();
                 if (!h) return;
+                // Filters
                 if (h.includes('ainouzaudre') || h.includes('adsterra') || h.includes('google')) return; 
-                if (h.endsWith('.mp3') || t.includes('download mp3') || t.includes('download audio')) candidates.push(h);
+                
+                if (h.endsWith('.mp3') || t.includes('download mp3') || t.includes('download audio')) {
+                    candidates.push(h);
+                }
             });
 
             if (candidates.length === 0) return res.status(404).json({ error: "No link" });
 
+            // Prefer links ending in .mp3
             let bestLink = candidates.find(link => link.endsWith('.mp3')) || candidates[0];
 
+            // If it's a redirect page (not mp3 yet), hop once more
             if (!bestLink.endsWith('.mp3')) {
                 try {
                     const page2 = await axios.get(bestLink);
@@ -68,8 +76,11 @@ function scrapeList(html) {
     $('article').each((i, el) => {
         const title = $(el).find('h2 a').text() || $(el).find('h3 a').text();
         const link = $(el).find('h2 a').attr('href') || $(el).find('h3 a').attr('href');
-        // Scrape Image
-        let img = $(el).find('img').attr('src') || $(el).find('img').attr('data-src');
+        
+        // BETTER IMAGE FINDER (Checks lazy load attributes)
+        let img = $(el).find('img').attr('data-src') || 
+                  $(el).find('img').attr('data-lazy-src') || 
+                  $(el).find('img').attr('src');
         
         if (title && link) {
             songs.push({ title: title.trim(), link, img });
