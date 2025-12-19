@@ -1,5 +1,5 @@
 {
-  "name": "JustNaija Music",
+  "name": "JustNaija Native",
   "description": "Stream & Download",
   "launch_path": "/index.html",
   "icons": {
@@ -9,16 +9,19 @@
   "type": "privileged",
   "permissions": {
     "systemXHR": {
-      "description": "API"
+      "description": "API Access"
     },
     "audio-channel-content": {
-      "description": "Music"
+      "description": "Background Music"
     },
     "device-storage:sdcard": {
       "access": "readwrite"
     },
     "device-storage:music": {
       "access": "readwrite"
+    },
+    "desktop-notification": {
+      "description": "Download alerts"
     }
   },
   "origin": "app://justnaija-kaios",
