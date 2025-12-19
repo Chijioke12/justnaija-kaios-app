@@ -2,10 +2,16 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
+// Helper to handle CORS
 const allowCors = fn => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
   return await fn(req, res);
 };
 
@@ -36,4 +42,5 @@ const handler = async (req, res) => {
         res.status(400).json({ error: "Bad Request" });
     } catch (e) { res.status(500).json({ error: e.message }); }
 };
+
 module.exports = allowCors(handler);
