@@ -1,14 +1,38 @@
 
-const API = window.location.hostname === 'localhost' ? 'http://localhost:3000/api/scraper' : '/api/scraper';
+/**
+ * CONFIGURATION
+ * 1. Deploy to Vercel.
+ * 2. Copy your URL (e.g., https://my-app.vercel.app).
+ * 3. Paste it below inside the quotes.
+ */
+const VERCEL_URL = ""; // <--- PASTE YOUR URL HERE
+
+// Automatic fallback for testing in browser
+const API_BASE = (VERCEL_URL === "") 
+    ? (window.location.hostname === 'localhost' ? 'http://localhost:3000/api/scraper' : '/api/scraper')
+    : VERCEL_URL + '/api/scraper';
+
 let songs = [], idx = 0;
 
 function log(msg) { document.getElementById('status').innerText = msg; }
 
 // 1. Fetch Songs
-fetch(API + '?type=list')
+fetch(API_BASE + '?type=list')
     .then(r => r.json())
-    .then(d => { songs = d; render(); log("Loaded " + songs.length); })
-    .catch(e => log("Error: " + e.message));
+    .then(d => { 
+        songs = d; 
+        render(); 
+        log("Loaded " + songs.length + " songs"); 
+        if(songs.length === 0) log("No songs found (Check API)");
+    })
+    .catch(e => {
+        log("Connection Error!");
+        console.error(e);
+        // If Vercel URL is missing
+        if(VERCEL_URL === "" && window.location.protocol === "app:") {
+            alert("Please edit app.js and add your Vercel URL!");
+        }
+    });
 
 // 2. Render List
 function render() {
@@ -27,36 +51,22 @@ function render() {
 document.addEventListener('keydown', e => {
     if(e.key === 'ArrowDown' && idx < songs.length-1) { idx++; render(); }
     if(e.key === 'ArrowUp' && idx > 0) { idx--; render(); }
-    if(e.key === 'Enter') playOrDownload(songs[idx]);
+    if(e.key === 'Enter') playSong(songs[idx]);
 });
 
-function playOrDownload(song) {
-    log("Getting Link...");
-    fetch(API + '?type=stream&url=' + encodeURIComponent(song.link))
+function playSong(song) {
+    log("Fetching MP3...");
+    fetch(API_BASE + '?type=stream&url=' + encodeURIComponent(song.link))
         .then(r => r.json())
         .then(d => {
             if(!d.url) return log("No MP3 found");
             
-            // Ask user preference (Simple toggle for now: Stream)
             log("Playing: " + song.title);
             const a = new Audio(d.url);
-            a.mozAudioChannelType = 'content';
+            a.mozAudioChannelType = 'content'; // Background Audio
             a.play();
             
-            // To Download instead, un-comment this:
-            /*
-            log("Downloading...");
-            const xhr = new XMLHttpRequest({mozSystem: true});
-            xhr.open('GET', d.url, true);
-            xhr.responseType = 'blob';
-            xhr.onload = () => {
-                if(xhr.status === 200) {
-                    navigator.getDeviceStorage('sdcard').addNamed(xhr.response, "Music/"+song.title+".mp3");
-                    log("Saved to SD!");
-                }
-            };
-            xhr.send();
-            */
+            a.onerror = (err) => log("Playback Error");
         })
         .catch(e => log("Stream Error"));
 }
