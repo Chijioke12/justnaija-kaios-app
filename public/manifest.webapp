@@ -1,9 +1,10 @@
 {
-  "name": "JustNaija",
-  "description": "Music Downloader",
+  "name": "JustNaija Pro",
+  "description": "Stream & Search Music",
   "launch_path": "/index.html",
   "icons": {
-    "56": "/icons/icon56.png"
+    "56": "/icons/icon56.png",
+    "112": "/icons/icon112.png"
   },
   "type": "privileged",
   "permissions": {
@@ -15,10 +16,8 @@
     },
     "device-storage:sdcard": {
       "access": "readwrite"
-    },
-    "device-storage:music": {
-      "access": "readwrite"
     }
   },
-  "origin": "app://justnaija-kaios"
+  "origin": "app://justnaija-kaios",
+  "theme_color": "#6917a6"
 }
