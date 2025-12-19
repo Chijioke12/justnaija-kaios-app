@@ -1,6 +1,6 @@
 {
-  "name": "JustNaija Pro",
-  "description": "Stream & Search Music",
+  "name": "JustNaija Music",
+  "description": "Stream & Download",
   "launch_path": "/index.html",
   "icons": {
     "56": "/icons/icon56.png",
@@ -9,15 +9,18 @@
   "type": "privileged",
   "permissions": {
     "systemXHR": {
-      "description": "Fetch API"
+      "description": "API"
     },
     "audio-channel-content": {
-      "description": "Play Music"
+      "description": "Music"
     },
     "device-storage:sdcard": {
+      "access": "readwrite"
+    },
+    "device-storage:music": {
       "access": "readwrite"
     }
   },
   "origin": "app://justnaija-kaios",
-  "theme_color": "#6917a6"
+  "theme_color": "#121212"
 }
